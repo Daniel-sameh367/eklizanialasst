@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { ADMIN_SESSION_COOKIE, createAdminSession, verifyAdminPassword } from "@/lib/admin-auth"
+import {
+  ADMIN_SESSION_COOKIE,
+  createAdminSession,
+  getSessionCookieOptions,
+  verifyAdminPassword,
+} from "@/lib/admin-auth"
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,13 +17,7 @@ export async function POST(request: NextRequest) {
 
     const { token, maxAge } = createAdminSession()
     const response = NextResponse.json({ success: true })
-    response.cookies.set(ADMIN_SESSION_COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge,
-    })
+    response.cookies.set(ADMIN_SESSION_COOKIE, token, getSessionCookieOptions(maxAge))
     return response
   } catch {
     return NextResponse.json({ error: "Login failed" }, { status: 500 })
