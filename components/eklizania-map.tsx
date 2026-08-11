@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useRef, useState } from "react"
-import type { MouseEvent as ReactMouseEvent } from "react"
+import type { PointerEvent as ReactPointerEvent } from "react"
 import useSWR from "swr"
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 import { STATION_COORDINATES } from "@/lib/station-coordinates"
@@ -48,15 +48,19 @@ export function EklizaniaMap() {
   }, [])
 
   const imageContainerRef = useRef<HTMLDivElement>(null)
+  // Records where a press started so we can tell a tap from a pan/drag. The
+  // zoom/pan wrapper swallows synthetic "click" events whenever the pointer
+  // moves even slightly, so we detect the tap ourselves on pointerup.
+  const pointerStart = useRef<{ x: number; y: number } | null>(null)
 
-  const handleMapClick = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+  const selectNearest = useCallback((clientX: number, clientY: number) => {
     const container = imageContainerRef.current
     if (!container) return
     const rect = container.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) return
 
-    const xPct = ((event.clientX - rect.left) / rect.width) * 100
-    const yPct = ((event.clientY - rect.top) / rect.height) * 100
+    const xPct = ((clientX - rect.left) / rect.width) * 100
+    const yPct = ((clientY - rect.top) / rect.height) * 100
 
     let nearestId: number | null = null
     let nearestDistance = Infinity
@@ -76,6 +80,23 @@ export function EklizaniaMap() {
     }
   }, [])
 
+  const handlePointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    pointerStart.current = { x: event.clientX, y: event.clientY }
+  }, [])
+
+  const handlePointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      const start = pointerStart.current
+      pointerStart.current = null
+      if (!start) return
+      // If the pointer moved more than a few pixels, treat it as a pan (not a tap).
+      const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y)
+      if (moved > 8) return
+      selectNearest(event.clientX, event.clientY)
+    },
+    [selectNearest]
+  )
+
   return (
     <div className="relative w-full select-none">
       <TransformWrapper
@@ -94,7 +115,8 @@ export function EklizaniaMap() {
         >
           <div
             ref={imageContainerRef}
-            onClick={handleMapClick}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
             className="relative w-full cursor-pointer"
             style={{ aspectRatio: `${MAP_WIDTH} / ${MAP_HEIGHT}` }}
           >
@@ -104,26 +126,6 @@ export function EklizaniaMap() {
               className="pointer-events-none block h-full w-full object-contain select-none"
               draggable={false}
             />
-
-            {Object.entries(STATION_COORDINATES).map(([idStr, coords]) => {
-              const id = Number(idStr)
-              const station = stationsById.get(id)
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  aria-label={`Station ${id}${station ? `: ${station.name}` : ""}`}
-                  onClick={() => setSelectedId(id)}
-                  className="absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
-                  style={{
-                    left: `${coords.x}%`,
-                    top: `${coords.y}%`,
-                    width: "4%",
-                    aspectRatio: "1 / 1",
-                  }}
-                />
-              )
-            })}
           </div>
         </TransformComponent>
       </TransformWrapper>
