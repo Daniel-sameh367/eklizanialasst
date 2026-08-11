@@ -108,30 +108,20 @@ export function EklizaniaMap() {
             {Object.entries(STATION_COORDINATES).map(([idStr, coords]) => {
               const id = Number(idStr)
               const station = stationsById.get(id)
-              const isOccupied = station?.status === "Occupied"
               return (
                 <button
                   key={id}
                   type="button"
                   aria-label={`Station ${id}${station ? `: ${station.name}` : ""}`}
                   onClick={() => setSelectedId(id)}
-                  className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
+                  className="absolute z-10 -translate-x-1/2 -translate-y-1/2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90"
                   style={{
                     left: `${coords.x}%`,
                     top: `${coords.y}%`,
                     width: "4%",
                     aspectRatio: "1 / 1",
                   }}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "block size-[35%] rounded-full ring-2 ring-white/90",
-                      isOccupied ? "bg-occupied" : "bg-available"
-                    )}
-                    style={{ boxShadow: "0 0 0 2px rgba(0,0,0,0.15)" }}
-                  />
-                </button>
+                />
               )
             })}
           </div>
