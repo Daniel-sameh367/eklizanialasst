@@ -23,6 +23,21 @@ export function verifyAdminPassword(password: string): boolean {
   return typeof password === "string" && password.length > 0 && password === getAdminPassword()
 }
 
+// Cookie options shared by login/logout. The v0 preview renders the app inside
+// a cross-origin iframe, so the session cookie is a third-party cookie: it must
+// be `SameSite=None; Secure` or the browser silently refuses to store it, and
+// every following request comes back 401. `Secure` is always safe here because
+// both the v0 preview and Vercel deployments are served over HTTPS.
+export function getSessionCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none" as const,
+    path: "/",
+    maxAge,
+  }
+}
+
 // Stateless signed token: "<expiryMs>.<hmac>". No server-side storage, so it
 // survives dev hot-reloads and works across serverless instances in production.
 export function createAdminSession(): { token: string; maxAge: number } {
